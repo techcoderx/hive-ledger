@@ -15,7 +15,7 @@
 *  limitations under the License.
 ********************************************************************************/
 
-include "glyphs.h"
+#include "glyphs.h"
 unsigned int const C_icon_back_colors[]
  = {
   0x00000000, 

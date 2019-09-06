@@ -29,7 +29,8 @@ ICONNAME   = nanos_app_steem.gif
 APPVERSION = 0.1
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
-APP_LOAD_PARAMS = --appFlags 0x40 --path "44'/93'" --curve secp256k1 --curve ed25519 $(COMMON_LOAD_PARAMS)
+# STEEM coin type is 135 and 0x80000087 in hexa
+APP_LOAD_PARAMS = --path "44'/135'" --curve secp256k1 $(COMMON_LOAD_PARAMS)
 APP_SOURCE_PATH = src
 SDK_SOURCE_PATH = lib_stusb lib_stusb_impl
 
