@@ -29,6 +29,19 @@ static const bagl_element_t *io_seproxyhal_touch_exit(const bagl_element_t *e);
 
 ux_state_t ux;
 
+// Parts of APDU packet
+#define CLA          0x80
+#define OFFSET_CLA   0x00
+#define OFFSET_INS   0x01
+#define OFFSET_P1    0x02
+#define OFFSET_P2    0x03
+#define OFFSET_LC    0x04
+#define OFFSET_CDATA 0x05
+
+// APDU Instructions
+#define INS_GET_PUBLIC_KEY 0x01
+#define INS_SIGN           0x02
+
 // Forward declaration
 static const ux_menu_entry_t menu_main[];
 
@@ -82,24 +95,18 @@ static void steem_main(void) {
                     THROW(0x6982);
                 }
 
-                if (G_io_apdu_buffer[0] != 0x80) {
+                if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
                     THROW(0x6E00);
                 }
 
-                // unauthenticated instruction
-                switch (G_io_apdu_buffer[1]) {
-                case 0x00: // reset
-                    flags |= IO_RESET_AFTER_REPLIED;
-                    THROW(0x9000);
+                // Handle APDU instructions
+                switch (G_io_apdu_buffer[OFFSET_INS]) {
+                case INS_GET_PUBLIC_KEY: // ID 1: Get Steem public keys
+                    THROW(0x6D00);
                     break;
 
-                case 0x01: // case 1
-                    THROW(0x9000);
-                    break;
-
-                case 0x02: // echo
-                    tx = rx;
-                    THROW(0x9000);
+                case INS_SIGN: // ID 2: Sign Steem transactions
+                    THROW(0x6D00); // TODO: Implement signing
                     break;
 
                 case 0xFF: // return to dashboard

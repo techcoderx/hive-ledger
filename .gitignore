@@ -3,3 +3,4 @@ debug
 dep
 obj
 .DS_Store
+.vscode
