@@ -29,6 +29,9 @@
 #define P2_ADDR 0x00
 #define P2_PUBKEY 0x01
 
+extern unsigned int ux_step;
+extern unsigned int ux_step_count;
+
 // Generate Steem public key from seed and compare
 static const SteemPubKeyApproved() {
     // cx_ecfp_256_private_key_t privatekey;
@@ -44,11 +47,32 @@ static const SteemPubKeyApproved() {
 // Approval UI for public key generation
 static const bagl_element_t ui_getPublicKey_approve[] = {
     UI_BACKGROUND(),
-    UI_ICON_LEFT(0x01,BAGL_GLYPH_ICON_CROSS),
-    UI_ICON_RIGHT(0x02,BAGL_GLYPH_ICON_CHECK),
-    UI_TEXT_BOLD(0x01,0,12,128,"Get public key"),
-    UI_TEXT_BOLD(0x01,0,26,128,"for Steem"),
+    UI_ICON_LEFT(0x00,BAGL_GLYPH_ICON_CROSS),
+    UI_ICON_RIGHT(0x00,BAGL_GLYPH_ICON_CHECK),
+    UI_TEXT_BOLD(0x01,0,12,128,"Generate Steem"),
+    UI_TEXT_BOLD(0x01,0,26,128,"Public Key"),
+    UI_TEXT(0x02,0,12,128,"User"),
+    UI_TEXT_BOLD(0x02,0,26,128,"techcoderx"),
 };
+
+// Approval UI preprocessor
+unsigned int ui_address_prepro(const bagl_element_t *element) {
+    if (element->component.userid > 0) {
+        unsigned int display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 1:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 2:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            }
+        }
+        return display;
+    }
+    return 1;
+}
 
 // Approval button click
 unsigned int ui_getPublicKey_approve_button(unsigned int button_mask,unsigned int button_mask_counter) {
@@ -73,6 +97,8 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
     if ((p2 != P2_ADDR) && (p2 != P2_PUBKEY)) THROW(0x6B00);
 
     // Show confirmation
-    UX_DISPLAY(ui_getPublicKey_approve,NULL);
+    ux_step = 0;
+    ux_step_count = 2;
+    UX_DISPLAY(ui_getPublicKey_approve,ui_address_prepro);
     *flags |= IO_ASYNCH_REPLY;
 }
