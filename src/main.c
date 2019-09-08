@@ -91,7 +91,7 @@ static void steem_main(void) {
                 rx = io_exchange(CHANNEL_APDU | flags, rx);
                 flags = 0;
 
-				PRINTF("App launched successfully!");
+				PRINTF("APDU instruction received!\n");
 
                 // no apdu received, well, reset the session, and reset the
                 // bootloader configuration

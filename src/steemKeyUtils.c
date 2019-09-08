@@ -29,6 +29,18 @@
 #define P2_ADDR 0x00
 #define P2_PUBKEY 0x01
 
+// Generate Steem public key from seed and compare
+static const SteemPubKeyApproved() {
+    // cx_ecfp_256_private_key_t privatekey;
+    // os_perso_derive_node_bip32(CX_CURVE_256K1,);
+    G_io_apdu_buffer[0] = 0x90;
+    G_io_apdu_buffer[1] = 0x00;
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX,2);
+    PRINTF("Request approved successfully\n");
+    ui_idle();
+    return 0;
+}
+
 // Approval UI for public key generation
 static const bagl_element_t ui_getPublicKey_approve[] = {
     UI_BACKGROUND(),
@@ -42,10 +54,12 @@ static const bagl_element_t ui_getPublicKey_approve[] = {
 unsigned int ui_getPublicKey_approve_button(unsigned int button_mask,unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
-            ui_idle();
+            G_io_apdu_buffer[0] = 0x69;
+            G_io_apdu_buffer[1] = 0x85;
+            ui_idle(); // Cancel
             break;
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
-            ui_idle(); // TODO: Generate Steem public key and compare
+            SteemPubKeyApproved(); // TODO: Generate Steem public key and compare
             break;
     }
     return 0;
@@ -60,4 +74,5 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
 
     // Show confirmation
     UX_DISPLAY(ui_getPublicKey_approve,NULL);
+    *flags |= IO_ASYNCH_REPLY;
 }
