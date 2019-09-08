@@ -22,6 +22,8 @@
 #include "glyphs.h"
 #include "os.h"
 #include "cx.h"
+#include "ux.h"
+#include "steemKeyUtils.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -62,7 +64,7 @@ static const ux_menu_entry_t menu_main[] = {
     UX_MENU_END
 };
 
-static void ui_idle(void) {
+void ui_idle(void) {
     UX_MENU_DISPLAY(0,menu_main, NULL);
 }
 
@@ -89,6 +91,8 @@ static void steem_main(void) {
                 rx = io_exchange(CHANNEL_APDU | flags, rx);
                 flags = 0;
 
+				PRINTF("App launched successfully!");
+
                 // no apdu received, well, reset the session, and reset the
                 // bootloader configuration
                 if (rx == 0) {
@@ -102,7 +106,7 @@ static void steem_main(void) {
                 // Handle APDU instructions
                 switch (G_io_apdu_buffer[OFFSET_INS]) {
                 case INS_GET_PUBLIC_KEY: // ID 1: Get Steem public keys
-                    THROW(0x6D00);
+                    handleGetSteemPubKey(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
                     break;
 
                 case INS_SIGN: // ID 2: Sign Steem transactions
