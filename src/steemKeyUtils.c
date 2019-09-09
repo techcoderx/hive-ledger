@@ -29,8 +29,14 @@
 #define P2_ADDR 0x00
 #define P2_PUBKEY 0x01
 
+// Maximum Steem username length is 16
+#define MAX_CHARS_PER_LINE 16
+
 extern unsigned int ux_step;
 extern unsigned int ux_step_count;
+
+static unsigned int current_text_pos;
+static char req_username[16];
 
 // Generate Steem public key from seed and compare
 static const SteemPubKeyApproved() {
@@ -52,7 +58,7 @@ static const bagl_element_t ui_getPublicKey_approve[] = {
     UI_TEXT_BOLD(0x01,0,12,128,"Generate Steem"),
     UI_TEXT_BOLD(0x01,0,26,128,"Public Key"),
     UI_TEXT(0x02,0,12,128,"User"),
-    UI_TEXT_BOLD(0x02,0,26,128,"techcoderx"),
+    UI_TEXT_BOLD(0x02,0,26,128,req_username),
 };
 
 // Approval UI preprocessor
@@ -89,6 +95,26 @@ unsigned int ui_getPublicKey_approve_button(unsigned int button_mask,unsigned in
     return 0;
 }
 
+// Get username from APDU command
+static unsigned char load_username() {
+    unsigned int i;
+    WIDE char *text = (char*) G_io_apdu_buffer + 5;
+    if (text[current_text_pos] == '\0') {
+        return 0;
+    }
+    i = 0;
+    while ((text[current_text_pos] != 0) && (text[current_text_pos] != '\n') &&
+           (i < MAX_CHARS_PER_LINE)) {
+        req_username[i++] = text[current_text_pos];
+        current_text_pos++;
+    }
+    if (text[current_text_pos] == '\n') {
+        current_text_pos++;
+    }
+    req_username[i] = '\0';
+    return 1;
+}
+
 // Handle APDU command ID 1
 // Approval to generate Steem public key
 void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
@@ -99,6 +125,8 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
     // Show confirmation
     ux_step = 0;
     ux_step_count = 2;
+    current_text_pos = 0;
+    load_username();
     UX_DISPLAY(ui_getPublicKey_approve,ui_address_prepro);
     *flags |= IO_ASYNCH_REPLY;
 }
