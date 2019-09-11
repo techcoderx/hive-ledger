@@ -1,7 +1,7 @@
 from ledgerblue.comm import getDongle
 
-username = raw_input("Enter Steem username: ")
-apdu = bytes("8001000000".decode('hex') + username)
+keyIndex = raw_input("Specify Key Index: ")
+apdu = bytes("8001000000".decode('hex') + keyIndex)
 dongle = getDongle(True)
 result = dongle.exchange(apdu)
 print(result)
