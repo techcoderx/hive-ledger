@@ -19,6 +19,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Base58 encoding
 bool b58enc(uint8_t *data, uint32_t binsz, char *b58, uint32_t *b58sz);
 
-int bin2dec(uint8_t *dst, uint64_t n);
+// Concatenate strings with integers
+void itoa(int n, char s[]);

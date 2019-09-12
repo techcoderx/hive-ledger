@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <inttypes.h>
 #include "steemUtils.h"
 #include "steemKeyUtils.h"
 #include "os_io_seproxyhal.h"
@@ -32,12 +31,17 @@
 #define P2_NO_CHAINCODE 0x00
 #define P2_CHAINCODE 0x01
 
+extern unsigned int ux_step;
+extern unsigned int ux_step_count;
+
+// Request and public key contexts
 typedef struct requestContext_t {
     uint8_t p1;
     uint8_t p2;
     uint16_t dataLength;
+    volatile unsigned int *tx;
     unsigned int index;
-    char * numstr[];
+    char numstr[]; // line 2 of confirmation screen
 } requestContext_t;
 
 requestContext_t reqctx;
@@ -50,6 +54,68 @@ typedef struct publicKeyContext_t{
 } publicKeyContext_t;
 
 publicKeyContext_t pubKeyCtx;
+
+// Public key to be copied to for verification screen
+char addr[53];
+
+// Comparison UI for verification
+static const bagl_element_t ui_publicKey_verify[] = {
+    UI_BACKGROUND(),
+    UI_ICON_LEFT(0x00,BAGL_GLYPH_ICON_CROSS),
+    UI_ICON_RIGHT(0x00,BAGL_GLYPH_ICON_CHECK),
+    UI_TEXT(0x01,0,12,128,"Verify"),
+    UI_TEXT_BOLD_SCROLL(0x01,23,26,82,addr),
+};
+
+// Scrolling public key effect
+unsigned int ui_publicKey_verify_prepro(const bagl_element_t *element) {
+    if (element->component.userid > 0) {
+        unsigned int display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 1:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                break;
+            }
+        }
+        return display;
+    }
+    return 1;
+}
+
+// Verification button click response
+unsigned int ui_publicKey_verify_button(unsigned int button_mask,unsigned int button_mask_counter) {
+    switch (button_mask) {
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+            ui_idle();
+            break;
+    }
+    return 0;
+}
+
+// Parse public key into APDU response
+uint32_t get_public_key_and_set_result() {
+    uint32_t tx = 0;
+    G_io_apdu_buffer[tx++] = 65;
+    os_memmove(G_io_apdu_buffer + tx, pubKeyCtx.publicKey.W, 65);
+    tx += 65;
+
+    uint32_t addressLength = strlen(pubKeyCtx.address);
+
+    G_io_apdu_buffer[tx++] = addressLength;
+    strcpy(&addr,pubKeyCtx.address);
+    os_memmove(G_io_apdu_buffer + tx,pubKeyCtx.address, addressLength);
+    tx += addressLength;
+    if (pubKeyCtx.getChaincode)
+    {
+        os_memmove(G_io_apdu_buffer + tx, pubKeyCtx.chainCode, 32);
+        tx += 32;
+    }
+    PRINTF("%u\n",tx);
+    return tx;
+}
 
 // Generate Steem public key from seed and compare
 uint32_t compressed_public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, char *out, uint32_t outLength) {
@@ -82,7 +148,6 @@ uint32_t compressed_public_key_to_wif(uint8_t *publicKey, uint32_t keyLength, ch
         THROW(EXCEPTION_OVERFLOW);
     }
     PRINTF("Steem public key: %s\n", out);
-    // PRINTF("Address: %s\n", addressLen + 3);
     return addressLen + 3;
 }
 
@@ -119,11 +184,15 @@ static const SteemPubKeyApproved() {
     os_memset(privateKeyData,0,sizeof(privateKeyData));
     public_key_to_wif(pubKeyCtx.publicKey.W,sizeof(pubKeyCtx.publicKey.W),pubKeyCtx.address,sizeof(pubKeyCtx.address));
 
-    G_io_apdu_buffer[0] = 0x90;
-    G_io_apdu_buffer[1] = 0x00;
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX,2);
+    // Return Steem public key as APDU response, and show comparison screen
+    reqctx.tx = get_public_key_and_set_result();    
+    io_exchange_with_code(0x9000,reqctx.tx);
     PRINTF("Request approved successfully\n");
-    ui_idle();
+    PRINTF("Steem derived public key: %s\n",addr);
+
+    ux_step = 0;
+    ux_step_count = 1;
+    UX_DISPLAY(ui_publicKey_verify,ui_publicKey_verify_prepro);
     return 0;
 }
 
@@ -133,7 +202,7 @@ static const bagl_element_t ui_getPublicKey_approve[] = {
     UI_ICON_LEFT(0x00,BAGL_GLYPH_ICON_CROSS),
     UI_ICON_RIGHT(0x00,BAGL_GLYPH_ICON_CHECK),
     UI_TEXT_BOLD(0x01,0,12,128,"Generate Steem"),
-    UI_TEXT_BOLD(0x01,0,26,128,"Public Key"),
+    UI_TEXT_BOLD(0x01,0,26,128,reqctx.numstr),
 };
 
 // Approval button click
@@ -159,15 +228,17 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
     if ((p1 != P1_CONFIRM) && (p1 != P1_NON_CONFIRM)) THROW(0x6B00);
     if ((p2 != P2_CHAINCODE) && (p2 != P2_NO_CHAINCODE)) THROW(0x6B00);
 
+    // Store APDU params in context
     os_memmove(&reqctx.p1,&p1,sizeof(p1));
     os_memmove(&reqctx.p2,&p2,sizeof(p2));
     os_memmove(&reqctx.dataLength,&dataLength,sizeof(dataLength));
+    os_memmove(&reqctx.tx,&tx,sizeof(tx));
     
     // Get deriavation address index requested (from 0 to 99)
-    if (G_io_apdu_buffer[5] == 0xA5 && G_io_apdu_buffer[6] == 0xA5) {
+    if (G_io_apdu_buffer[5] > 0x39 && G_io_apdu_buffer[6] > 0x39) {
         // Address #0 by default if not specified
         reqctx.index = 0;
-    } else if (G_io_apdu_buffer[6] == 0xA5) {
+    } else if (G_io_apdu_buffer[6] > 0x39) {
         // Single digit number requested
         reqctx.index = G_io_apdu_buffer[5] - 48;
     } else {
@@ -179,8 +250,18 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
         os_memset(&tempindex,0,sizeof(tempindex));
     }
 
-    PRINTF("Requested deriavation index is %u\n",reqctx.index);
+    PRINTF("APDU buffer 5: %x\n",G_io_apdu_buffer[5]);
+    PRINTF("APDU buffer 6: %x\n",G_io_apdu_buffer[6]);
+    PRINTF("Requeted index: %u\n",reqctx.index);
 
+    // Prepare confirmation screen
+    // Concatenate requested index with confirmation
+    os_memmove(&reqctx.numstr,"Public Key #",sizeof("Public Key #"));
+    char instr[3];
+    itoa(reqctx.index,instr);
+    strcat(reqctx.numstr,instr);
+    os_memset(&instr,0,sizeof(instr));
+    
     // Show confirmation
     UX_DISPLAY(ui_getPublicKey_approve,NULL);
     *flags |= IO_ASYNCH_REPLY;

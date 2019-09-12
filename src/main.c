@@ -72,6 +72,14 @@ void ui_idle(void) {
     UX_MENU_DISPLAY(0,menu_main, NULL);
 }
 
+// APDU response with response code
+void io_exchange_with_code(uint16_t code, uint32_t tx) {
+	G_io_apdu_buffer[tx++] = code >> 8;
+	G_io_apdu_buffer[tx++] = code & 0xFF;
+    // Send back the response, do not restart the event loop
+	io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+}
+
 // App starting point
 static void steem_main(void) {
     volatile unsigned int rx = 0;

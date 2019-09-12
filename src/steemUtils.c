@@ -18,6 +18,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
+#include <stdio.h>
 #include "os.h"
 
 unsigned char const BASE58ALPHABET[] = {
@@ -26,6 +28,7 @@ unsigned char const BASE58ALPHABET[] = {
     'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm',
     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 
+// Base58 encoding
 bool b58enc(uint8_t *bin, uint32_t binsz, char *b58, uint32_t *b58sz) {
 	int carry;
 	uint32_t i, j, high, zcount = 0;
@@ -71,22 +74,28 @@ bool b58enc(uint8_t *bin, uint32_t binsz, char *b58, uint32_t *b58sz) {
 }
 
 // Concatenate strings with integers
-int bin2dec(uint8_t *dst, uint64_t n) {
-	if (n == 0) {
-		dst[0] = '0';
-		dst[1] = '\0';
-		return 1;
+void reverse(char s[]) {
+	int i, j;
+	char c;
+
+	for (i = 0, j = strlen(s)-1; i<j; i++, j--) {
+		c = s[i];
+		s[i] = s[j];
+		s[j] = c;
 	}
-	// determine final length
-	int len = 0;
-	for (uint64_t nn = n; nn != 0; nn /= 10) {
-		len++;
-	}
-	// write digits in big-endian order
-	for (int i = len-1; i >= 0; i--) {
-		dst[i] = (n % 10) + '0';
-		n /= 10;
-	}
-	dst[len] = '\0';
-	return len;
+}
+
+void itoa(int n, char s[]) {
+	int i, sign;
+
+	if ((sign = n) < 0)  /* record sign */
+		n = -n;          /* make n positive */
+	i = 0;
+	do {       /* generate digits in reverse order */
+		s[i++] = n % 10 + '0';   /* get next digit */
+	} while ((n /= 10) > 0);     /* delete it */
+	if (sign < 0)
+		s[i++] = '-';
+	s[i] = '\0';
+	reverse(s);
 }

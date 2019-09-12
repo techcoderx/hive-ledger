@@ -36,7 +36,11 @@ extern ux_state_t ux;
 #define UI_ICON_RIGHT(userid, glyph) {{BAGL_ICON,userid,117,13,8,6,0,0,0,0xFFFFFF,0,0,glyph},NULL,0,0,0,NULL,NULL,NULL}
 #define UI_TEXT(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER,0},(char *)text,0,0,0,NULL,NULL,NULL}
 #define UI_TEXT_BOLD(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER,0},(char *)text,0,0,0,NULL,NULL,NULL}
+#define UI_TEXT_BOLD_SCROLL(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0x80 | 10,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_EXTRABOLD_11px|BAGL_FONT_ALIGNMENT_CENTER,26},(char *)text,0,0,0,NULL,NULL,NULL}
 
 // ui_idle displays the main menu screen. Command handlers should call ui_idle
 // when they finish.
 void ui_idle(void);
+
+// Send APDU response with response code
+void io_exchange_with_code(uint16_t code, uint32_t tx);
