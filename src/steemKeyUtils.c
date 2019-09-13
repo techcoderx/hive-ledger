@@ -234,24 +234,10 @@ void handleGetSteemPubKey(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t 
     os_memmove(&reqctx.dataLength,&dataLength,sizeof(dataLength));
     os_memmove(&reqctx.tx,&tx,sizeof(tx));
     
-    // Get deriavation address index requested (from 0 to 99)
-    if (G_io_apdu_buffer[5] > 0x39 && G_io_apdu_buffer[6] > 0x39) {
-        // Address #0 by default if not specified
-        reqctx.index = 0;
-    } else if (G_io_apdu_buffer[6] > 0x39) {
-        // Single digit number requested
-        reqctx.index = G_io_apdu_buffer[5] - 48;
-    } else {
-        // Double digit number requested
-        unsigned int tempindex = 0;
-        tempindex += ((G_io_apdu_buffer[5] - 48) * 10);
-        tempindex += (G_io_apdu_buffer[6] - 48);
-        reqctx.index = tempindex;
-        os_memset(&tempindex,0,sizeof(tempindex));
-    }
+    // Get deriavation address index requested
+    reqctx.index = G_io_apdu_buffer[5];
 
     PRINTF("APDU buffer 5: %x\n",G_io_apdu_buffer[5]);
-    PRINTF("APDU buffer 6: %x\n",G_io_apdu_buffer[6]);
     PRINTF("Requeted index: %u\n",reqctx.index);
 
     // Prepare confirmation screen
