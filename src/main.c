@@ -24,6 +24,7 @@
 #include "cx.h"
 #include "ux.h"
 #include "steemKeyUtils.h"
+#include "memoHandler.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -41,8 +42,10 @@ ux_state_t ux;
 #define OFFSET_CDATA 0x05
 
 // APDU Instructions
-#define INS_GET_PUBLIC_KEY 0x01
-#define INS_SIGN           0x02
+#define INS_GET_PUBLIC_KEY	0x01
+#define INS_SIGN 			0x02
+#define INS_ENCRYPT_MEMO	0X03
+#define INS_DECRYPT_MEMO	0X04
 
 // Stepping screens
 unsigned int ux_step;
@@ -124,6 +127,14 @@ static void steem_main(void) {
                 case INS_SIGN: // ID 2: Sign Steem transactions
                     THROW(0x6D00); // TODO: Implement signing
                     break;
+				
+				case INS_ENCRYPT_MEMO: // ID 3: Encrypt memo
+					handleEncryptMemo(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
+					break;
+
+				case INS_DECRYPT_MEMO: // ID 4: Decrypt memo
+					THROW(0x6D00);
+					break;
 
                 case 0xFF: // return to dashboard
                     goto return_to_dashboard;

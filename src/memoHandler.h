@@ -1,7 +1,7 @@
 /*******************************************************************************
-*   (c) 2016 Ledger
-*   (c) 2018 Taras Shchybovyk
-*	(c) 2019 TechCoderX
+*
+*  (c) 2016 Ledger
+*  (c) 2019 TechCoderX
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -16,14 +16,4 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#define STEEM_PUB_KEY_LENGTH 53
-#define STEEM_MEMO_MAX_LENGTH 2047
-
-// Base58 encoding
-bool b58enc(uint8_t *data, uint32_t binsz, char *b58, uint32_t *b58sz);
-
-// Concatenate strings with integers
-void itoa(int n, char s[]);
+void handleEncryptMemo (uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx);
