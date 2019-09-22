@@ -40,25 +40,34 @@ transactionContext_t txctx;
 extern unsigned int ux_step;
 extern unsigned int ux_step_count;
 
+union TxContent {
+    vote_t votetx;
+};
+
+union TxContent txcontent;
+
 // Forward declaration
 void processOps(unsigned int txtype,char serializedDetail[]);
 
 // Confirmation UI
-static const bagl_element_t sign_request_confirmation_ui[] = {
+// Vote
+static const bagl_element_t sign_request_confirmation_vote[] = {
     UI_BACKGROUND(),
     UI_ICON_LEFT(0x00,BAGL_GLYPH_ICON_CROSS),
     UI_ICON_RIGHT(0x00,BAGL_GLYPH_ICON_CHECK),
     UI_TEXT(0x01,0,12,128,"Operation"),
     UI_TEXT_BOLD(0x01,0,26,128,&txctx.txName),
-    // UI_TEXT(0x02,0,12,128,)
+    UI_TEXT(0x02,0,12,128,"Voter"),
+    UI_TEXT_BOLD(0x02,0,26,128,txcontent.votetx.voter),
+    UI_TEXT(0x03,0,12,128,"Author"),
+    UI_TEXT_BOLD(0x03,0,26,128,txcontent.votetx.author),
+    UI_TEXT(0x04,0,12,128,"Permlink"),
+    UI_TEXT_BOLD_SCROLL(0x04,23,26,82,txcontent.votetx.permlink),
+    UI_TEXT(0x05,0,12,128,"Weight"),
+    UI_TEXT_BOLD(0x05,0,26,128,txcontent.votetx.weight)
 };
 
-/*
-void setarr() {
-    sign_request_confirmation_ui[4] = (bagl_element_t)UI_TEXT_BOLD(0x01,0,24,128,&txctx.txName);
-}*/
-
-unsigned int sign_request_confirmation_ui_button(unsigned int button_mask,unsigned int button_mask_counter) {
+unsigned int sign_request_confirmation_vote_button(unsigned int button_mask,unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
@@ -67,6 +76,30 @@ unsigned int sign_request_confirmation_ui_button(unsigned int button_mask,unsign
             break;
     }
     return 0;
+}
+
+unsigned int signreq_vote_prepro(const bagl_element_t *element) {
+    if (element->component.userid > 0) {
+        unsigned int display = (ux_step == element->component.userid - 1);
+        if (display) {
+            switch (element->component.userid) {
+            case 1:
+            case 2:
+            case 3:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            case 4:
+                UX_CALLBACK_SET_INTERVAL(MAX(
+                    3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+                break;
+            case 5:
+                UX_CALLBACK_SET_INTERVAL(2000);
+                break;
+            }
+        }
+        return display;
+    }
+    return 1;
 }
 
 void parseTx(uint8_t *serialized) {
@@ -107,35 +140,32 @@ void processOps(unsigned int txtype,char serializedDetail[]) {
             PRINTF("Voter chars: %u\n",charnum);
 
             // Voter
-            char voter[17];
             char voterserial[33];
             strncpy(&voterserial,serializedDetail+2,charnum * 2);
-            hexStrToAsciiStr(voter,voterserial);
-            PRINTF("Voter: %s\n",voter);
+            hexStrToAsciiStr(txcontent.votetx.voter,voterserial);
+            PRINTF("Voter: %s\n",txcontent.votetx.voter);
 
             pos = pos + (charnum * 2) + 2;
 
             // Author
-            char author[17];
             char authorserial[33];
             strncpy(&charnumstr,serializedDetail+pos,2);
             charnum = dualCharHexToInt(charnumstr);
             PRINTF("Author chars: %u\n",charnum);
             strncpy(&authorserial,serializedDetail+pos+2,charnum * 2);
-            hexStrToAsciiStr(author,authorserial);
-            PRINTF("Author: %s\n",author);
+            hexStrToAsciiStr(txcontent.votetx.author,authorserial);
+            PRINTF("Author: %s\n",txcontent.votetx.author);
 
             pos = pos + (charnum * 2) + 2;
 
             // Permlink
-            char permlink[256];
             char permlinkSerial[511];
             strncpy(&charnumstr,serializedDetail+pos,2);
             charnum = dualCharHexToInt(charnumstr);
             PRINTF("Permlink chars: %u\n",charnum);
             strncpy(&permlinkSerial,serializedDetail+pos+2,charnum * 2);
-            hexStrToAsciiStr(permlink,permlinkSerial);
-            PRINTF("Permlink: %s\n",permlink);
+            hexStrToAsciiStr(txcontent.votetx.permlink,permlinkSerial);
+            PRINTF("Permlink: %s\n",txcontent.votetx.permlink);
 
             pos = pos + (charnum * 2) + 2;
 
@@ -143,15 +173,13 @@ void processOps(unsigned int txtype,char serializedDetail[]) {
             char weightSerial[5];
             strncpy(&weightSerial,serializedDetail+pos,4);
             int weight = parsevoteweight(weightSerial);
+            itoa(weight,txcontent.votetx.weight);
 
             // Prepare confirmation screen
             ux_step = 0;
             ux_step_count = 5;
-            UX_DISPLAY(sign_request_confirmation_ui,NULL);
-            
+            UX_DISPLAY(sign_request_confirmation_vote,signreq_vote_prepro);
             break;
-        case 1:
-            UX_DISPLAY(sign_request_confirmation_ui,NULL);
         default:
             // Invalid operation type
             THROW(0x6B00);

@@ -25,7 +25,8 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength
 /*
 // Full list of Steem blockchain operations to be parsed
 // To save space on the Nano S (which has very limited storage space), some transaction types which are very unlikely being made will not be supported (e.g. declining voting rights).
-// 34 types of transactions are currently supported.
+// Escrow transfer will not be supported in the first release but likely to be added in future wallet updates.
+// 30 types of transactions are currently supported.
 // DO NOT CHANGE THE ORDER AS DEFINED IN https://github.com/steemit/steem/blob/master/libraries/protocol/include/steem/protocol/operations.hpp
 */
 static const char SteemOperations[47][29] = {
@@ -36,8 +37,8 @@ static const char SteemOperations[47][29] = {
     "Power Down",
     "Create Limit Order",
     "Cancel Limit Order",
-    "Feed Price",
-    "Feed Publish", // Not supported on wallet
+    "Feed Price", // Not supported on wallet
+    "Feed Publish",
     "Convert",
     "Create Account",
     "Update Acc", // Pre HF21, owner and active key only. Not supported on wallet
@@ -56,11 +57,11 @@ static const char SteemOperations[47][29] = {
     "Request Account Recovery",
     "Recover Account",
     "Change Recovery Account",
-    "Escrow Transfer",
-    "Escrow Dispute",
-    "Escrow Release",
+    "Escrow Transfer", // Future wallet update
+    "Escrow Dispute", // Future wallet update
+    "Escrow Release", // Future wallet update
     "Pow2", // Depreciated
-    "Escrow Approve",
+    "Escrow Approve", // Future wallet update
     "Transfer To Savings",
     "Transfer From Savings",
     "Cancel Transfer From Savings",
@@ -77,3 +78,12 @@ static const char SteemOperations[47][29] = {
     "Vote Proposal",
     "Remove Proposal"
 };
+
+// Transaction parameters
+
+typedef struct vote_t {
+    char voter[17];
+    char author[17];
+    char permlink[257];
+    char weight[7];
+} vote_t;
