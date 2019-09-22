@@ -19,6 +19,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define STEEM_CHAIN_ID 0000000000000000000000000000000000000000000000000000000000000000
 #define STEEM_PUB_KEY_LENGTH 53
 #define STEEM_MEMO_MAX_LENGTH 2047
 
@@ -27,3 +28,15 @@ bool b58enc(uint8_t *data, uint32_t binsz, char *b58, uint32_t *b58sz);
 
 // Concatenate strings with integers
 void itoa(int n, char s[]);
+
+// Hexlify/unhexlify helpers
+int a2v(char c);
+char v2a(int c);
+unsigned int dualCharHexToInt(char h[]);
+void hexStrToAsciiStr(char *dest,char h[]);
+
+// Deserialize vote weight
+int parsevoteweight(char sw[]);
+
+// Remove non alphanumeric characters from string
+void stringRemoveNonAlphaNum(char *str);

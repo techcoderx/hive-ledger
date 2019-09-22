@@ -24,7 +24,8 @@
 #include "cx.h"
 #include "ux.h"
 #include "steemKeyUtils.h"
-#include "memoHandler.h"
+#include "signHandler.h"
+// #include "memoHandler.h"
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
@@ -59,7 +60,7 @@ static const ux_menu_entry_t menu_main[];
 // About
 static const ux_menu_entry_t menu_about[] = {
     {NULL, NULL, 0, NULL, "Version", APPVERSION, 0, 0},
-    {menu_main, NULL, 2, &C_icon_back, "Back", NULL, 61, 40},
+    {menu_main, NULL, 1, &C_icon_back, "Back", NULL, 61, 40},
     UX_MENU_END
 };
 
@@ -125,11 +126,12 @@ static void steem_main(void) {
                     break;
 
                 case INS_SIGN: // ID 2: Sign Steem transactions
-                    THROW(0x6D00); // TODO: Implement signing
+                    handleSign(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
                     break;
 				
 				case INS_ENCRYPT_MEMO: // ID 3: Encrypt memo
-					handleEncryptMemo(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
+					// handleEncryptMemo(G_io_apdu_buffer[OFFSET_P1], G_io_apdu_buffer[OFFSET_P2], G_io_apdu_buffer + OFFSET_CDATA, G_io_apdu_buffer[OFFSET_LC], &flags, &tx);
+					THROW(0x6D00);
 					break;
 
 				case INS_DECRYPT_MEMO: // ID 4: Decrypt memo

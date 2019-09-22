@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "os.h"
+#include "os_io_seproxyhal.h"
 
 unsigned char const BASE58ALPHABET[] = {
     '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
@@ -98,4 +99,79 @@ void itoa(int n, char s[]) {
 		s[i++] = '-';
 	s[i] = '\0';
 	reverse(s);
+}
+
+// Hexlify/Unhexlify helpers
+int a2v(char c) {
+    if ((c >= '0') && (c <= '9')) {
+        return c - '0';
+    }
+    if ((c >= 'a') && (c <= 'f')) {
+        return c - 'a' + 10;
+    }
+    else return 0;
+}
+
+char v2a(int c) {
+    const char hex[] = "0123456789abcdef";
+    return hex[c];
+}
+
+unsigned int dualCharHexToInt(char h[]) {
+    unsigned int r = 0;
+    r = r + (a2v(h[0]) * 16);
+    r = r + a2v(h[1]);
+    return r;
+}
+
+void hexStrToAsciiStr(char *dest,char h[]) {
+	char getchar[3];
+	char resultchar[(strlen(h) / 2) + 1];
+	unsigned int pos = 0;
+	unsigned int charpos = 0;
+	while(pos < strlen(h)) {
+		strncpy(&getchar,h + pos,2);
+		unsigned int charint = dualCharHexToInt(getchar);
+		resultchar[charpos] = (char)charint;
+		charpos++;
+		pos = pos + 2;
+	}
+	resultchar[charpos] = '\0';
+	os_memmove(dest,resultchar,sizeof(resultchar));
+}
+
+// Deserialize vote weight
+int parsevoteweight(char sw[]) {
+    char firstb[3] = {sw[2],sw[3]};
+    char secondb[3] = {sw[0],sw[1]};
+    
+    unsigned int firstint = dualCharHexToInt(firstb);
+    unsigned int secondint = dualCharHexToInt(secondb);
+
+    int weight = 0;
+
+    if (firstint >= 216 && firstint <= 255) {
+        // Downvotes
+        weight += ((firstint-255) * 256);
+        weight += (secondint-256);
+    } else if (firstint >= 0 && firstint <= 39) {
+        // Upvotes
+        weight += (firstint * 256);
+        weight += secondint;
+    }
+    return weight;
+}
+
+// Remove non alphanumeric characters from string
+void stringRemoveNonAlphaNum(char *str) {
+	unsigned long i = 0;
+    unsigned long j = 0;
+    char c;
+
+    while ((c = str[i++]) != '\0') {
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+            str[j++] = c;
+        }
+    }
+    str[j] = '\0';
 }

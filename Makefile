@@ -26,7 +26,7 @@ include $(BOLOS_SDK)/Makefile.defines
 
 APPNAME    = Steem
 ICONNAME   = nanos_app_steem.gif
-APPVERSION = 0.1
+APPVERSION = 0.2
 
 # The --path argument here restricts which BIP32 paths the app is allowed to derive.
 # STEEM coin type is 135 and 0x80000087 in hexa
