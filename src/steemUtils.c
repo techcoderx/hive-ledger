@@ -164,8 +164,8 @@ int parsevoteweight(char sw[]) {
 
 // Remove non alphanumeric characters from string
 void stringRemoveNonAlphaNum(char *str) {
-	unsigned long i = 0;
-    unsigned long j = 0;
+	unsigned int i = 0;
+    unsigned int j = 0;
     char c;
 
     while ((c = str[i++]) != '\0') {

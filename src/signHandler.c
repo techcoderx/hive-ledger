@@ -23,16 +23,13 @@
 #include "cx.h"
 #include "ux.h"
 
-typedef struct signReqContext_t {
-    unsigned int addrIndex;
-    char serializedBuffer;
-} signReqContext_t;
-
-signReqContext_t signreqctx;
-
+// Due to hardware limitations, the maximum transaction size that it can process is 1 KB.
+// 64 bytes have been allocated for Chain ID for signing.
 typedef struct transactionContext_t {
     unsigned int txType;
-    char txName[];
+    unsigned int addrIndex;
+    char txName[27];
+    char serializedBuffer[1024];
 } transactionContext_t;
 
 transactionContext_t txctx;
@@ -46,8 +43,9 @@ union TxContent {
 
 union TxContent txcontent;
 
-// Forward declaration
+// Forward declarations
 void processOps(unsigned int txtype,char serializedDetail[]);
+void signTransaction();
 
 // Confirmation UI
 // Vote
@@ -71,6 +69,7 @@ unsigned int sign_request_confirmation_vote_button(unsigned int button_mask,unsi
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
         case BUTTON_EVT_RELEASED | BUTTON_LEFT:
+            signTransaction();
             io_exchange_with_code(0x9000,0);
             ui_idle();
             break;
@@ -102,15 +101,33 @@ unsigned int signreq_vote_prepro(const bagl_element_t *element) {
     return 1;
 }
 
-void parseTx(uint8_t *serialized) {
-    unsigned int currentParsingPos = 22; // Starting from 23rd character
+void parseTx(char *serialized) {
+    unsigned int currentParsingPos = 86; // Starting from 84th character
     char hexStr[3];
-    strncpy(&hexStr,(char*)serialized + currentParsingPos,2);
+    strncpy(&hexStr,serialized + currentParsingPos,2);
     txctx.txType = dualCharHexToInt(hexStr);
-    os_memcpy(&txctx.txName,&SteemOperations[txctx.txType],sizeof(SteemOperations[txctx.txType]));
+    strcpy(&txctx.txName,SteemOperations[txctx.txType]);
     PRINTF("Transaction Type: %u\n",txctx.txType);
+    PRINTF("Transaction name: %s\n",txctx.txName);
+    PRINTF("Transaction name with amphersand: %s\n",&txctx.txName);
 
-    processOps(txctx.txType,(char*)serialized + currentParsingPos + 2);
+    processOps(txctx.txType,serialized + currentParsingPos + 2);
+}
+
+// ECC signing
+void signTransaction() {
+    // cx_sha256_t sha256;
+    // cx_sha256_t datasha256;
+    PRINTF("Serialized string received: %s\n",txctx.serializedBuffer);
+}
+
+// TODO: Fetch APDU data in parts
+void cacheSerialBuffer() {
+    char ChainID[322] = "0000000000000000000000000000000000000000000000000000000000000000";
+    strcat(&ChainID,G_io_apdu_buffer+5);
+    os_memmove(&txctx.serializedBuffer,&ChainID,strlen(ChainID));
+    stringRemoveNonAlphaNum(&txctx.serializedBuffer);
+    PRINTF("Cached buffer: %s\n",txctx.serializedBuffer);
 }
 
 // APDU command ID 2
@@ -118,18 +135,18 @@ void parseTx(uint8_t *serialized) {
 void handleSign(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength, volatile unsigned int *flags, volatile unsigned int *tx) {
     // P1 is the key index of private key to sign
     // P2 is the APDU stream section number (starts from 0, incremented, ff to process command)
-    stringRemoveNonAlphaNum((char*)dataBuffer);
-    PRINTF("Serialized string: %s\n",dataBuffer);
-    os_memmove(&signreqctx.addrIndex,&p1,sizeof(p1));
-    parseTx(dataBuffer);
-
+    // PRINTF("%s\n",G_io_apdu_buffer+5);
+    os_memmove(&txctx.addrIndex,&p1,sizeof(p1));
+    cacheSerialBuffer();
+    PRINTF("%s\n",txctx.serializedBuffer);
+    parseTx(&txctx.serializedBuffer);
     // io_exchange_with_code(0x9000,0);
     *flags |= IO_ASYNCH_REPLY;
 }
 
 // Deserialize operations for confirmation
 void processOps(unsigned int txtype,char serializedDetail[]) {
-    unsigned long int pos = 0;
+    unsigned int pos = 0;
     char charnumstr[3];
     unsigned int charnum = 0;
     PRINTF("%s\n",serializedDetail);
@@ -140,40 +157,42 @@ void processOps(unsigned int txtype,char serializedDetail[]) {
             PRINTF("Voter chars: %u\n",charnum);
 
             // Voter
-            char voterserial[33];
-            strncpy(&voterserial,serializedDetail+2,charnum * 2);
-            hexStrToAsciiStr(txcontent.votetx.voter,voterserial);
+            char ser[511];
+            strncpy(&ser,serializedDetail+2,charnum * 2);
+            hexStrToAsciiStr(txcontent.votetx.voter,ser);
             PRINTF("Voter: %s\n",txcontent.votetx.voter);
+            PRINTF("Transaction name2: %s\n",txctx.txName);
+            os_memset(&ser,0,sizeof(ser));
 
             pos = pos + (charnum * 2) + 2;
 
             // Author
-            char authorserial[33];
             strncpy(&charnumstr,serializedDetail+pos,2);
             charnum = dualCharHexToInt(charnumstr);
             PRINTF("Author chars: %u\n",charnum);
-            strncpy(&authorserial,serializedDetail+pos+2,charnum * 2);
-            hexStrToAsciiStr(txcontent.votetx.author,authorserial);
+            strncpy(&ser,serializedDetail+pos+2,charnum * 2);
+            hexStrToAsciiStr(txcontent.votetx.author,ser);
             PRINTF("Author: %s\n",txcontent.votetx.author);
+            os_memset(&ser,0,sizeof(ser));
 
             pos = pos + (charnum * 2) + 2;
 
             // Permlink
-            char permlinkSerial[511];
             strncpy(&charnumstr,serializedDetail+pos,2);
             charnum = dualCharHexToInt(charnumstr);
             PRINTF("Permlink chars: %u\n",charnum);
-            strncpy(&permlinkSerial,serializedDetail+pos+2,charnum * 2);
-            hexStrToAsciiStr(txcontent.votetx.permlink,permlinkSerial);
+            strncpy(&ser,serializedDetail+pos+2,charnum * 2);
+            hexStrToAsciiStr(txcontent.votetx.permlink,ser);
             PRINTF("Permlink: %s\n",txcontent.votetx.permlink);
+            os_memset(&ser,0,sizeof(ser));
 
             pos = pos + (charnum * 2) + 2;
 
             // Weight
-            char weightSerial[5];
-            strncpy(&weightSerial,serializedDetail+pos,4);
-            int weight = parsevoteweight(weightSerial);
-            itoa(weight,txcontent.votetx.weight);
+            strncpy(&ser,serializedDetail+pos,4);
+            itoa(parsevoteweight(ser),txcontent.votetx.weight);
+            PRINTF("Weight: %s\n",txcontent.votetx.weight);
+            os_memset(&ser,0,sizeof(ser));
 
             // Prepare confirmation screen
             ux_step = 0;

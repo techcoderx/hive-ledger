@@ -24,25 +24,25 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength
 
 /*
 // Full list of Steem blockchain operations to be parsed
-// To save space on the Nano S (which has very limited storage space), some transaction types which are very unlikely being made will not be supported (e.g. declining voting rights).
+// To save space on the Nano S (which has very limited storage space), some transaction types which are very unlikely being made will not be supported (e.g. declining voting rights). Some may be abbrevated to save space.
 // Escrow transfer will not be supported in the first release but likely to be added in future wallet updates.
 // 30 types of transactions are currently supported.
 // DO NOT CHANGE THE ORDER AS DEFINED IN https://github.com/steemit/steem/blob/master/libraries/protocol/include/steem/protocol/operations.hpp
 */
-static const char SteemOperations[47][29] = {
+static const char SteemOperations[47][25] = {
     "Vote",
     "Comment",
     "Trasfer",
     "Power Up",
     "Power Down",
-    "Create Limit Order",
-    "Cancel Limit Order",
-    "Feed Price", // Not supported on wallet
+    "Create Order",
+    "Cancel Order",
+    "Price", // Feed Price, Not supported on wallet
     "Feed Publish",
     "Convert",
     "Create Account",
-    "Update Acc", // Pre HF21, owner and active key only. Not supported on wallet
-    "Update Witness", // Pre HF20, Not supported on wallet
+    "UpdAcc", // Pre HF21, owner and active key only. Not supported on wallet
+    "UpdWitness", // Pre HF20, Not supported on wallet
     "Witness Vote",
     "Witness Proxy",
     "Pow", // Depreciated
@@ -50,28 +50,28 @@ static const char SteemOperations[47][29] = {
     "Delete Comment",
     "Custom JSON",
     "Comment Options",
-    "Power Down Route", // Not supported on wallet
-    "Create Limit Order", // limit_order_create2
+    "pdr", // set_vesting_withdrw_route, not supported on wallet
+    "CrOrd", // limit_order_create2, not supported. Please use limit_order_create1 instead.
     "Claim Account",
     "Create Claimed Account",
     "Request Account Recovery",
     "Recover Account",
     "Change Recovery Account",
-    "Escrow Transfer", // Future wallet update
-    "Escrow Dispute", // Future wallet update
-    "Escrow Release", // Future wallet update
+    "EscTransfer", // Future wallet update
+    "EscDispute", // Future wallet update
+    "EscRelease", // Future wallet update
     "Pow2", // Depreciated
-    "Escrow Approve", // Future wallet update
+    "EscApprove", // Future wallet update
     "Transfer To Savings",
-    "Transfer From Savings",
-    "Cancel Transfer From Savings",
-    "Custom Binary", // Not supported on wallet
-    "Decline Voting Rights", // Not supported on wallet
-    "Reset Acc", // Depreciated
-    "Set Reset Acc", // Depreciated
+    "Savings Withdrawal",
+    "Cancel Savings Withdraw",
+    "CBinary", // custom_binary, not supported on wallet
+    "DecVR", // decline_voting_rights, not supported on wallet
+    "ResetAcc", // Depreciated
+    "SetResetAcc", // Depreciated
     "Claim Rewards",
-    "Delegate Steem Power",
-    "Create Acc With Delegation", // Depreciated
+    "Delegate SP",
+    "CAD", // Create account with delegation, depreciated
     "Update Witness",
     "Update Profile", // Posting key enabled of Account Update
     "Create Proposal",
