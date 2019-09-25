@@ -49,8 +49,8 @@ ux_state_t ux;
 #define INS_DECRYPT_MEMO	0X04
 
 // Stepping screens
-unsigned int ux_step;
-unsigned int ux_step_count;
+unsigned short ux_step;
+unsigned short ux_step_count;
 
 // Forward declaration
 static const ux_menu_entry_t menu_main[];

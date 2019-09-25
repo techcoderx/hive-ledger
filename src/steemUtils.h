@@ -20,7 +20,6 @@
 #include <stdint.h>
 
 #define STEEM_PUB_KEY_LENGTH 53
-#define STEEM_MEMO_MAX_LENGTH 2047
 
 // Base58 encoding
 bool b58enc(uint8_t *data, uint32_t binsz, char *b58, uint32_t *b58sz);
@@ -39,3 +38,13 @@ int parsevoteweight(char sw[]);
 
 // Remove non alphanumeric characters from string
 void stringRemoveNonAlphaNum(char *str);
+
+unsigned char check_canonical(uint8_t *rs);
+
+int ecdsa_der_to_sig(const uint8_t *der, uint8_t *sig);
+
+void rng_rfc6979(unsigned char *rnd,
+                 unsigned char *h1,
+                 unsigned char *x, unsigned int x_len,
+                 const unsigned char *q, unsigned int q_len,
+                 unsigned char *V, unsigned char *K);

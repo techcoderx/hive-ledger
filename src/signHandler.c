@@ -27,15 +27,15 @@
 // 64 bytes have been allocated for Chain ID for signing.
 typedef struct transactionContext_t {
     unsigned int txType;
-    unsigned int addrIndex;
-    char txName[27];
     char serializedBuffer[1024];
+    char txName[25];
+    uint8_t hash[32];
 } transactionContext_t;
 
 transactionContext_t txctx;
 
-extern unsigned int ux_step;
-extern unsigned int ux_step_count;
+extern unsigned short ux_step;
+extern unsigned short ux_step_count;
 
 union TxContent {
     vote_t votetx;
@@ -43,9 +43,73 @@ union TxContent {
 
 union TxContent txcontent;
 
+uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                               0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
+                               0xba, 0xae, 0xdc, 0xe6, 0xaf, 0x48, 0xa0, 0x3b,
+                               0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
+
+cx_sha256_t sha256;
+
 // Forward declarations
 void processOps(unsigned int txtype,char serializedDetail[]);
-void signTransaction();
+
+// ECC signing
+void signTransaction(void) {
+    char unhexedBuf[326];
+    hexStrToAsciiStr(unhexedBuf,txctx.serializedBuffer);
+    cx_sha256_init(&sha256);
+    cx_hash(&sha256.header,CX_LAST,&txctx.hash,0,&txctx.hash,sizeof(txctx.hash));
+
+    PRINTF("SHA256\n");
+    PRINTF("Hash: %s\n",&txctx.hash);
+
+    uint8_t privateKeyData[64];
+    cx_ecfp_256_private_key_t privateKey;
+    uint32_t tx = 0;
+    uint8_t V[33];
+    uint8_t K[32];
+    int tries = 0;
+
+    PRINTF("Private key begin\n");
+
+    PRINTF("%u\n",G_io_apdu_buffer[2]);
+
+    uint32_t bip32Path[5] = {0x8000002C, 0x80000087, 0x80000000, 0, G_io_apdu_buffer[2]};
+
+    PRINTF("Serialized string received: %s\n",txctx.serializedBuffer);
+    PRINTF("Unhexed string received: %s\n",unhexedBuf);
+
+    os_perso_derive_node_bip32(CX_CURVE_256K1,bip32Path,5,privateKeyData,NULL);
+    cx_ecfp_init_private_key(CX_CURVE_256K1,privateKeyData,32,&privateKey);
+    os_memset(privateKeyData,0,sizeof(privateKeyData));
+
+    for (;;) {
+        if (tries == 0) {
+            rng_rfc6979(unhexedBuf, txctx.hash, privateKey.d, privateKey.d_len, SECP256K1_N, 32, V, K);
+        } else {
+            rng_rfc6979(unhexedBuf, txctx.hash, NULL, 0, SECP256K1_N, 32, V, K);
+        }
+        uint32_t infos;
+        tx = cx_ecdsa_sign(&privateKey, CX_NO_CANONICAL | CX_RND_PROVIDED | CX_LAST, CX_SHA256,
+                           txctx.hash, 32, //?
+                           unhexedBuf, 100,//?
+                           &infos);
+        if ((infos & CX_ECCINFO_PARITY_ODD) != 0) {
+            G_io_apdu_buffer[100] |= 0x01; //?
+        }
+        G_io_apdu_buffer[0] = 27 + 4 + (0x00 & 0x01);//?
+        ecdsa_der_to_sig(G_io_apdu_buffer + 100, G_io_apdu_buffer + 1); //?
+        if (check_canonical(G_io_apdu_buffer + 1)) {
+            tx = 1 + 64;
+            break;
+        } else {
+            tries++;
+        }
+    }
+
+    io_exchange_with_code(0x9000,tx);
+    ui_idle();
+}
 
 // Confirmation UI
 // Vote
@@ -68,8 +132,9 @@ static const bagl_element_t sign_request_confirmation_vote[] = {
 unsigned int sign_request_confirmation_vote_button(unsigned int button_mask,unsigned int button_mask_counter) {
     switch (button_mask) {
         case BUTTON_EVT_RELEASED | BUTTON_RIGHT:
-        case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             signTransaction();
+            break;
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT:
             io_exchange_with_code(0x9000,0);
             ui_idle();
             break;
@@ -114,13 +179,6 @@ void parseTx(char *serialized) {
     processOps(txctx.txType,serialized + currentParsingPos + 2);
 }
 
-// ECC signing
-void signTransaction() {
-    // cx_sha256_t sha256;
-    // cx_sha256_t datasha256;
-    PRINTF("Serialized string received: %s\n",txctx.serializedBuffer);
-}
-
 // TODO: Fetch APDU data in parts
 void cacheSerialBuffer() {
     char ChainID[322] = "0000000000000000000000000000000000000000000000000000000000000000";
@@ -136,7 +194,6 @@ void handleSign(uint8_t p1, uint8_t p2, uint8_t *dataBuffer, uint16_t dataLength
     // P1 is the key index of private key to sign
     // P2 is the APDU stream section number (starts from 0, incremented, ff to process command)
     // PRINTF("%s\n",G_io_apdu_buffer+5);
-    os_memmove(&txctx.addrIndex,&p1,sizeof(p1));
     cacheSerialBuffer();
     PRINTF("%s\n",txctx.serializedBuffer);
     parseTx(&txctx.serializedBuffer);

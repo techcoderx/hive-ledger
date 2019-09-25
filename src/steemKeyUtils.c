@@ -31,8 +31,8 @@
 #define P2_NO_CHAINCODE 0x00
 #define P2_CHAINCODE 0x01
 
-extern unsigned int ux_step;
-extern unsigned int ux_step_count;
+extern unsigned short ux_step;
+extern unsigned short ux_step_count;
 
 // Request and public key contexts
 typedef struct requestContext_t {
