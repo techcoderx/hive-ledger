@@ -1,4 +1,4 @@
-# Steem wallet for Ledger Nano S
+# Hive wallet for Ledger Nano S
 
 To compile:
 ```
