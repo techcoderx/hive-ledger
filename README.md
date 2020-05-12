@@ -1,4 +1,6 @@
-# Hive wallet for Ledger Nano S
+# Steem/Hive wallet for Ledger Nano S [DEPRECIATED]
+
+This repository has been depreciated, details soon.
 
 To compile:
 ```
